@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { InlineMath, BlockMath } from 'react-katex';
+
 import quizData from '../data/quiz_questions.json';
 import OnboardingFlow from './OnboardingFlow';
 import TopicTransition from './TopicTransition';
@@ -17,19 +19,16 @@ const QuizGame = () => {
   const [showTransition, setShowTransition] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [selectedQuestionIndices, setSelectedQuestionIndices] = useState([]);
-  // New state for sampler round
   const [isInSamplerRound, setIsInSamplerRound] = useState(true);
   const [visitedTopics, setVisitedTopics] = useState(new Set());
 
   const QUESTIONS_PER_TOPIC = 3;
 
-  // Get all available topics
   const topics = Object.entries(quizData.topics).map(([id, topic]) => ({
     id,
     name: topic.name
   }));
 
-  // Helper function to get random indices
   const getRandomIndices = (max, count) => {
     const indices = new Set();
     while (indices.size < count) {
@@ -45,22 +44,37 @@ const QuizGame = () => {
 
   const handleOnboardingComplete = (userData) => {
     const profile = new UserProfile(userData.name, userData);
-    
-    // Start with the first topic for sampler round
-    const initialTopic = topics[0].id;
     setUserProfile(profile);
-    setIsInSamplerRound(true);
-    setVisitedTopics(new Set([initialTopic]));
     
-    // Get just one random question for the first topic
-    const totalQuestions = quizData.topics[initialTopic].questions.length;
-    const randomIndex = Math.floor(Math.random() * totalQuestions);
+    // Check if this is the test account
+    const isTestAccount = userData.name.toLowerCase() === 'testaccount';
     
-    setSelectedTopic(initialTopic);
+    if (isTestAccount) {
+      // Skip sampler round and start with weakest topic
+      setIsInSamplerRound(false);
+      const initialTopic = profile.selectNextTopic(topics.map(t => t.id));
+      setSelectedTopic(initialTopic);
+      
+      // Get full set of questions for this topic
+      const totalQuestions = quizData.topics[initialTopic].questions.length;
+      const randomIndices = getRandomIndices(totalQuestions, Math.min(QUESTIONS_PER_TOPIC, totalQuestions));
+      setSelectedQuestionIndices(randomIndices);
+    } else {
+      // Normal flow - start with sampler round
+      const initialTopic = topics[0].id;
+      setIsInSamplerRound(true);
+      setVisitedTopics(new Set([initialTopic]));
+      setSelectedTopic(initialTopic);
+      
+      // Get one random question for sampler
+      const totalQuestions = quizData.topics[initialTopic].questions.length;
+      const randomIndex = Math.floor(Math.random() * totalQuestions);
+      setSelectedQuestionIndices([randomIndex]);
+    }
+    
     setCurrentQuestionIndex(0);
     setAnswers({});
     setQuestionsInCurrentTopic(0);
-    setSelectedQuestionIndices([randomIndex]);
   };
 
   const startNewQuestions = (topicId) => {
@@ -86,7 +100,6 @@ const QuizGame = () => {
 
   const handleNextWeakestTopic = () => {
     setIsInSamplerRound(false);
-    // Use Thompson sampling to select the next topic
     const nextTopic = userProfile.selectNextTopic(topics.map(t => t.id));
     startNewQuestions(nextTopic);
   };
@@ -103,7 +116,6 @@ const QuizGame = () => {
       setScore(score + 1);
     }
     
-    // Update the user's topic statistics
     userProfile.updateTopic(selectedTopic, isAnswerCorrect);
 
     setAnswers({
@@ -148,12 +160,23 @@ const QuizGame = () => {
     }, 1500);
   };
 
-  // Show onboarding if user hasn't completed it
+  // Helper function to convert string with $ delimiters to components
+  const renderMathText = (text) => {
+      const parts = text.split(/(\$[^\$]+\$)/g);
+      return parts.map((part, index) => {
+          if (part.startsWith('$') && part.endsWith('$')) {
+              // Remove the $ delimiters and render as math
+              const mathExp = part.slice(1, -1);
+              return <InlineMath key={index} math={mathExp} />;
+          }
+          return <span key={index}>{part}</span>;
+      });
+  };
+
   if (!userProfile) {
     return <OnboardingFlow onComplete={handleOnboardingComplete} />;
   }
 
-  // Show transition screen after completing questions
   if (showTransition) {
     return (
       <TopicTransition
@@ -163,11 +186,11 @@ const QuizGame = () => {
         onContinue={handleContinueTopic}
         onNextWeakest={handleNextWeakestTopic}
         onViewProfile={handleViewProfile}
+        startNewQuestions={startNewQuestions}
       />
     );
   }
 
-  // Show profile view
   if (showProfile) {
     return (
       <UserProfileView
@@ -181,7 +204,6 @@ const QuizGame = () => {
     );
   }
 
-  // Quiz Screen
   const questionIndex = selectedQuestionIndices[currentQuestionIndex];
   const currentQuestion = quizData.topics[selectedTopic].questions[questionIndex];
   
@@ -204,8 +226,10 @@ const QuizGame = () => {
         </span>
       </div>
       
-      <h2 className="text-xl font-bold mb-6">{currentQuestion.text}</h2>
-      
+      <h2 className="text-xl font-bold mb-6">
+        {renderMathText(currentQuestion.text)}
+      </h2>      
+
       <div className="space-y-4">
         {currentQuestion.options.map((option) => (
           <button
@@ -222,7 +246,7 @@ const QuizGame = () => {
                 : 'border-gray-200 hover:bg-gray-50'
             }`}
           >
-            {option.text}
+            {renderMathText(option.text)}
           </button>
         ))}
       </div>

@@ -20,6 +20,14 @@ export class TopicStats {
     }
   }
 
+  // Bulk update stats for test account
+  bulkUpdate(correct, incorrect) {
+    this.totalAttempts = correct + incorrect;
+    this.correctAnswers = correct;
+    this.alpha = correct + 1;  // +1 for prior
+    this.beta = incorrect + 1; // +1 for prior
+  }
+
   // Sample from beta distribution
   // Using approximation method for Beta distribution sampling
   sampleBeta() {
@@ -34,7 +42,6 @@ export class TopicStats {
     if (shape < 1) {
       return this.sampleGamma(1 + shape) * Math.pow(Math.random(), 1 / shape);
     }
-
     const d = shape - 1/3;
     const c = 1 / Math.sqrt(9 * d);
     
@@ -64,11 +71,42 @@ export class TopicStats {
   }
 }
 
+const TEST_ACCOUNT_DATA = {
+  'moral_scenarios': { correct: 4, incorrect: 16 },
+  'high_school_mathematics': { correct: 8, incorrect: 12 },
+  'high_school_world_history': { correct: 12, incorrect: 8 },
+  'marketing': { correct: 15, incorrect: 5 },
+  'computer_security': { correct: 16, incorrect: 4 },
+  'high_school_geography': { correct: 14, incorrect: 6 },
+  'college_computer_science': { correct: 10, incorrect: 1 },
+  'professional_psychology': { correct: 18, incorrect: 2 },
+  'virology': { correct: 13, incorrect: 7 },
+  'prehistory': { correct: 11, incorrect: 9 },
+  'high_school_psychology': { correct: 17, incorrect: 3 },
+  'high_school_chemistry': { correct: 9, incorrect: 11 },
+  'logical_fallacies': { correct: 7, incorrect: 13 },
+  'business_ethics': { correct: 15, incorrect: 5 },
+  'world_religions': { correct: 14, incorrect: 6 },
+  'astronomy': { correct: 12, incorrect: 8 },
+  'college_biology': { correct: 16, incorrect: 4 },
+  'philosophy': { correct: 13, incorrect: 7 },
+  'machine_learning': { correct: 70, incorrect: 10 },
+  'nutrition': { correct: 11, incorrect: 2 } 
+};
+
 export class UserProfile {
   constructor(name, preferences) {
     this.name = name;
     this.preferences = preferences;
     this.topicStats = {};
+
+    // If this is the test account, initialize with mock data
+    if (name.toLowerCase() === 'testaccount') {
+      Object.entries(TEST_ACCOUNT_DATA).forEach(([topicId, data]) => {
+        this.initializeTopic(topicId);
+        this.topicStats[topicId].bulkUpdate(data.correct, data.incorrect);
+      });
+    }
   }
 
   initializeTopic(topicId) {
@@ -86,18 +124,15 @@ export class UserProfile {
   selectNextTopic(availableTopics) {
     // Initialize any new topics
     availableTopics.forEach(topic => this.initializeTopic(topic));
-
     // Sample from each topic's beta distribution
     const samples = availableTopics.map(topicId => ({
       topicId,
       sample: this.topicStats[topicId].sampleBeta()
     }));
-
     // Select topic with lowest sample (we want to focus on topics with lower success rates)
     const selectedTopic = samples.reduce((prev, current) => 
       current.sample < prev.sample ? current : prev
     );
-
     return selectedTopic.topicId;
   }
 

@@ -4,68 +4,116 @@ const TopicTransition = ({
   currentTopic, 
   topics, 
   userProfile, 
-  onContinue, 
-  onNextWeakest,
-  onViewProfile 
+  onContinue,
+  onViewProfile,
+  startNewQuestions
 }) => {
-  // Calculate Thompson sampling scores for debugging
-  const topicScores = topics.map(topic => {
-    const { alpha, beta } = userProfile.getTopicStats(topic.id);
-    // Sample from beta distribution
-    const score = Math.random() * (alpha / (alpha + beta));
+  // Calculate success rates for each topic
+  const topicStats = topics.map(topic => {
+    const stats = userProfile.getTopicStats(topic.id);
     return {
       id: topic.id,
       name: topic.name,
-      score,
-      alpha,
-      beta
+      successRate: stats.getSuccessRate() * 100,
+      attempts: stats.totalAttempts,
+      correct: stats.correctAnswers
     };
-  }).sort((a, b) => a.score - b.score); // Sort by score ascending (weakest first)
+  });
+
+  // Get next 2 recommended topics using Thompson sampling
+  const getNextRecommendedTopics = () => {
+    const availableTopics = topics.map(t => t.id).filter(id => id !== currentTopic);
+    const next1 = userProfile.selectNextTopic(availableTopics);
+    const next2 = userProfile.selectNextTopic(availableTopics.filter(id => id !== next1));
+    return [next1, next2];
+  };
+
+  const recommendedTopics = getNextRecommendedTopics();
+
+  const handleTopicSelect = (topicId) => {
+    if (topicId === currentTopic) {
+      onContinue();
+    } else {
+      startNewQuestions(topicId);
+    }
+  };
+
+  // Reusable topic card component
+  const TopicCard = ({ topic, isRecommended = false }) => {
+    const isCurrentTopic = topic.id === currentTopic;
+    
+    return (
+      <button
+        onClick={() => handleTopicSelect(topic.id)}
+        className={`p-4 rounded-lg border transition-all duration-200 text-left ${
+          isCurrentTopic 
+            ? 'border-blue-500 bg-blue-50 hover:bg-blue-100' 
+            : isRecommended
+              ? 'border-green-500 bg-green-50 hover:bg-green-100'
+              : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
+        }`}
+      >
+        <h3 className="font-semibold mb-2">{topic.name}</h3>
+        <div className="space-y-1 text-sm text-gray-600">
+          <div className="flex justify-between">
+            <span>Success Rate:</span>
+            <span className={`font-medium ${
+              topic.successRate >= 80 ? 'text-green-600' :
+              topic.successRate >= 60 ? 'text-blue-600' :
+              topic.successRate >= 40 ? 'text-yellow-600' :
+              'text-red-600'
+            }`}>
+              {topic.successRate.toFixed(1)}%
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span>Questions:</span>
+            <span>{topic.correct}/{topic.attempts}</span>
+          </div>
+        </div>
+      </button>
+    );
+  };
 
   return (
-    <div className="max-w-2xl mx-auto bg-white p-6 rounded-lg shadow">
+    <div className="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow">
       <div className="space-y-6">
-        <div className="text-center">
-          <h2 className="text-xl font-bold mb-2">Round Complete!</h2>
-          <p className="text-gray-600">
-            Current Topic: {topics.find(t => t.id === currentTopic).name}
-          </p>
-        </div>
-
-        <div className="flex flex-col gap-4">
-          <button
-            onClick={onContinue}
-            className="w-full py-3 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
-          >
-            Continue Current Topic
-          </button>
-          
-          <button
-            onClick={onNextWeakest}
-            className="w-full py-3 px-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200"
-          >
-            Try Next Topic
-          </button>
-          
+        <div className="flex justify-between items-center mb-8">
+          <h2 className="text-2xl font-bold">Choose Your Next Topic</h2>
           <button
             onClick={onViewProfile}
-            className="w-full py-3 px-4 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition-colors duration-200"
+            className="py-2 px-4 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition-colors duration-200"
           >
-            View Profile
+            View Full Profile
           </button>
         </div>
 
-        {/* Debug information */}
-        <div className="mt-6 p-4 bg-gray-50 rounded-lg text-sm">
-          <h3 className="font-semibold mb-2">Topic Rankings (Debug):</h3>
-          <div className="space-y-1">
-            {topicScores.map((topic, index) => (
-              <div key={topic.id} className="flex justify-between">
-                <span>{index + 1}. {topic.name}</span>
-                <span className="text-gray-600">
-                  Score: {topic.score.toFixed(3)} (α={topic.alpha}, β={topic.beta})
-                </span>
-              </div>
+        {/* Recommended Topics Row */}
+        <div className="space-y-2">
+          <h3 className="text-lg font-semibold text-gray-700">Recommended Topics</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <TopicCard 
+              topic={topicStats.find(t => t.id === currentTopic)} 
+              isRecommended={true}
+            />
+            {recommendedTopics.map(topicId => (
+              <TopicCard
+                key={topicId}
+                topic={topicStats.find(t => t.id === topicId)}
+                isRecommended={true}
+              />
+            ))}
+          </div>
+        </div>
+
+        <hr className="border-gray-200" />
+
+        {/* All Topics Grid */}
+        <div className="space-y-2">
+          <h3 className="text-lg font-semibold text-gray-700">All Topics</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {topicStats.map((topic) => (
+              <TopicCard key={topic.id} topic={topic} />
             ))}
           </div>
         </div>

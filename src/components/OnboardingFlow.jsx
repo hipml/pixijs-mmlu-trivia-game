@@ -6,12 +6,15 @@ const OnboardingFlow = ({ onComplete }) => {
   const handleStart = () => {
     if (!name.trim()) return;
     
+    // Check if this is the test account
+    const isTestAccount = name.toLowerCase() === 'testaccount';
+    
     onComplete({
       name: name,
-      // Include minimal required fields for UserProfile
       experienceLevel: 'Beginner',
-      mode: 'sampler',  // Custom mode flag
-      isFirstRound: true  // Flag to indicate we're in the initial sampler round
+      mode: isTestAccount ? 'test' : 'sampler',  // Set special mode for test account
+      isFirstRound: !isTestAccount,  // Skip first round for test account
+      skipLightningRound: isTestAccount  // Skip lightning round for test account
     });
   };
 
@@ -23,7 +26,6 @@ const OnboardingFlow = ({ onComplete }) => {
           Get ready for a quick tour through all our topics!
         </p>
       </div>
-
       <div className="mb-8">
         <h2 className="text-xl font-semibold mb-4">What's your name?</h2>
         <input
@@ -34,7 +36,6 @@ const OnboardingFlow = ({ onComplete }) => {
           className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
-
       <button
         onClick={handleStart}
         disabled={!name.trim()}
