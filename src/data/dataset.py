@@ -26,7 +26,7 @@ SELECTED_SUBJECTS = [
     'virology'
 ]
 
-def get_formatted_questions(subject: str, questions: List, num_questions: int = 25):
+def get_formatted_questions(subject: str, questions: List, num_questions: int = 50):
     formatted_questions = []
     
     for i, item in enumerate(questions):
