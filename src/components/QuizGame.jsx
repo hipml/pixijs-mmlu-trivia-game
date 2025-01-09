@@ -17,6 +17,9 @@ const QuizGame = () => {
   const [showTransition, setShowTransition] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [selectedQuestionIndices, setSelectedQuestionIndices] = useState([]);
+  // New state for sampler round
+  const [isInSamplerRound, setIsInSamplerRound] = useState(true);
+  const [visitedTopics, setVisitedTopics] = useState(new Set());
 
   const QUESTIONS_PER_TOPIC = 3;
 
@@ -42,22 +45,22 @@ const QuizGame = () => {
 
   const handleOnboardingComplete = (userData) => {
     const profile = new UserProfile(userData.name, userData);
-    // Select initial topic directly using the profile object
-    const initialTopic = profile.selectNextTopic(topics.map(t => t.id));
-    setUserProfile(profile);
     
-    // Start questions with the selected topic
+    // Start with the first topic for sampler round
+    const initialTopic = topics[0].id;
+    setUserProfile(profile);
+    setIsInSamplerRound(true);
+    setVisitedTopics(new Set([initialTopic]));
+    
+    // Get just one random question for the first topic
     const totalQuestions = quizData.topics[initialTopic].questions.length;
-    const randomIndices = getRandomIndices(
-      totalQuestions,
-      Math.min(QUESTIONS_PER_TOPIC, totalQuestions)
-    );
+    const randomIndex = Math.floor(Math.random() * totalQuestions);
     
     setSelectedTopic(initialTopic);
     setCurrentQuestionIndex(0);
     setAnswers({});
     setQuestionsInCurrentTopic(0);
-    setSelectedQuestionIndices(randomIndices);
+    setSelectedQuestionIndices([randomIndex]);
   };
 
   const startNewQuestions = (topicId) => {
@@ -77,10 +80,12 @@ const QuizGame = () => {
   };
 
   const handleContinueTopic = () => {
+    setIsInSamplerRound(false);
     startNewQuestions(selectedTopic);
   };
 
   const handleNextWeakestTopic = () => {
+    setIsInSamplerRound(false);
     // Use Thompson sampling to select the next topic
     const nextTopic = userProfile.selectNextTopic(topics.map(t => t.id));
     startNewQuestions(nextTopic);
@@ -108,13 +113,37 @@ const QuizGame = () => {
 
     setTimeout(() => {
       setShowFeedback(false);
-      const newQuestionsCount = questionsInCurrentTopic + 1;
-      
-      if (newQuestionsCount >= QUESTIONS_PER_TOPIC) {
-        setShowTransition(true);
+
+      if (isInSamplerRound) {
+        // Find next unvisited topic
+        const nextUnvisitedTopic = topics.find(t => !visitedTopics.has(t.id))?.id;
+        
+        if (nextUnvisitedTopic) {
+          // Move to next topic
+          const newVisitedTopics = new Set(visitedTopics);
+          newVisitedTopics.add(nextUnvisitedTopic);
+          setVisitedTopics(newVisitedTopics);
+          
+          // Get one random question from next topic
+          const randomIndex = Math.floor(Math.random() * quizData.topics[nextUnvisitedTopic].questions.length);
+          setSelectedTopic(nextUnvisitedTopic);
+          setCurrentQuestionIndex(0);
+          setQuestionsInCurrentTopic(0);
+          setSelectedQuestionIndices([randomIndex]);
+        } else {
+          // All topics visited, transition to normal mode
+          setIsInSamplerRound(false);
+          setShowTransition(true);
+        }
       } else {
-        setCurrentQuestionIndex(currentQuestionIndex + 1);
-        setQuestionsInCurrentTopic(newQuestionsCount);
+        // Normal mode logic
+        const newQuestionsCount = questionsInCurrentTopic + 1;
+        if (newQuestionsCount >= QUESTIONS_PER_TOPIC) {
+          setShowTransition(true);
+        } else {
+          setCurrentQuestionIndex(currentQuestionIndex + 1);
+          setQuestionsInCurrentTopic(newQuestionsCount);
+        }
       }
     }, 1500);
   };
@@ -164,7 +193,10 @@ const QuizGame = () => {
             Topic: {topics.find(t => t.id === selectedTopic).name}
           </span>
           <span className="text-sm text-gray-500 ml-4">
-            Question {questionsInCurrentTopic + 1} of {QUESTIONS_PER_TOPIC}
+            {isInSamplerRound 
+              ? `Topic ${visitedTopics.size} of ${topics.length}`
+              : `Question ${questionsInCurrentTopic + 1} of ${QUESTIONS_PER_TOPIC}`
+            }
           </span>
         </div>
         <span className="text-sm text-gray-500">
