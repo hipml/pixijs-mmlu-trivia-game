@@ -8,6 +8,14 @@ import TopicTransition from './TopicTransition';
 import UserProfileView from './UserProfileView';
 import { UserProfile } from './UserProfile';
 
+// Create audio elements once
+const successSound = new Audio('/correct.mp3');
+const errorSound = new Audio('/incorrect.mp3');
+
+// Set volume to 50%
+successSound.volume = 0.5;
+errorSound.volume = 0.5;
+
 const QuizGame = () => {
   const [selectedTopic, setSelectedTopic] = useState(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -101,15 +109,19 @@ const QuizGame = () => {
   };
 
   const handleAnswer = (optionId) => {
-    const questionIndex = selectedQuestionIndices[currentQuestionIndex];
-    const currentQuestion = quizData.topics[selectedTopic].questions[questionIndex];
-    const isAnswerCorrect = optionId === currentQuestion.correctAnswer;
+    const currentIdx = selectedQuestionIndices[currentQuestionIndex];
+    const questionData = quizData.topics[selectedTopic].questions[currentIdx];
+    const isAnswerCorrect = optionId === questionData.correctAnswer;
     
     setIsCorrect(isAnswerCorrect);
     setShowFeedback(true);
     
+    // Play the appropriate sound
     if (isAnswerCorrect) {
+      successSound.play().catch(e => console.log('Sound play failed:', e));
       setScore(score + 1);
+    } else {
+      errorSound.play().catch(e => console.log('Sound play failed:', e));
     }
     
     userProfile.updateTopic(selectedTopic, isAnswerCorrect);
