@@ -22,7 +22,7 @@ An adaptive quiz game powered by the HuggingFace MMLU dataset, featuring intelli
 
 ## How to Play
 
-:video-game: [Play now on Vercel!](https://vercel.com/paul-lamberts-projects/pixijs-mmlu-trivia-game)
+:video_game: [Play now on Vercel!](https://vercel.com/paul-lamberts-projects/pixijs-mmlu-trivia-game)
 
 1. Create an account or log in
 2. Select a category or let the system recommend one based on your progress
