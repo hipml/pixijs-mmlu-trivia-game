@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { InlineMath, BlockMath } from 'react-katex';
+import katex from 'katex';
 
 import quizData from '../data/quiz_questions.json';
 import OnboardingFlow from './OnboardingFlow';
@@ -46,27 +47,22 @@ const QuizGame = () => {
     const profile = new UserProfile(userData.name, userData);
     setUserProfile(profile);
     
-    // Check if this is the test account
     const isTestAccount = userData.name.toLowerCase() === 'testaccount';
     
     if (isTestAccount) {
-      // Skip sampler round and start with weakest topic
       setIsInSamplerRound(false);
       const initialTopic = profile.selectNextTopic(topics.map(t => t.id));
       setSelectedTopic(initialTopic);
       
-      // Get full set of questions for this topic
       const totalQuestions = quizData.topics[initialTopic].questions.length;
       const randomIndices = getRandomIndices(totalQuestions, Math.min(QUESTIONS_PER_TOPIC, totalQuestions));
       setSelectedQuestionIndices(randomIndices);
     } else {
-      // Normal flow - start with sampler round
       const initialTopic = topics[0].id;
       setIsInSamplerRound(true);
       setVisitedTopics(new Set([initialTopic]));
       setSelectedTopic(initialTopic);
       
-      // Get one random question for sampler
       const totalQuestions = quizData.topics[initialTopic].questions.length;
       const randomIndex = Math.floor(Math.random() * totalQuestions);
       setSelectedQuestionIndices([randomIndex]);
@@ -127,28 +123,23 @@ const QuizGame = () => {
       setShowFeedback(false);
 
       if (isInSamplerRound) {
-        // Find next unvisited topic
         const nextUnvisitedTopic = topics.find(t => !visitedTopics.has(t.id))?.id;
         
         if (nextUnvisitedTopic) {
-          // Move to next topic
           const newVisitedTopics = new Set(visitedTopics);
           newVisitedTopics.add(nextUnvisitedTopic);
           setVisitedTopics(newVisitedTopics);
           
-          // Get one random question from next topic
           const randomIndex = Math.floor(Math.random() * quizData.topics[nextUnvisitedTopic].questions.length);
           setSelectedTopic(nextUnvisitedTopic);
           setCurrentQuestionIndex(0);
           setQuestionsInCurrentTopic(0);
           setSelectedQuestionIndices([randomIndex]);
         } else {
-          // All topics visited, transition to normal mode
           setIsInSamplerRound(false);
           setShowTransition(true);
         }
       } else {
-        // Normal mode logic
         const newQuestionsCount = questionsInCurrentTopic + 1;
         if (newQuestionsCount >= QUESTIONS_PER_TOPIC) {
           setShowTransition(true);
@@ -160,17 +151,25 @@ const QuizGame = () => {
     }, 1500);
   };
 
-  // Helper function to convert string with $ delimiters to components
   const renderMathText = (text) => {
-      const parts = text.split(/(\$[^\$]+\$)/g);
-      return parts.map((part, index) => {
-          if (part.startsWith('$') && part.endsWith('$')) {
-              // Remove the $ delimiters and render as math
-              const mathExp = part.slice(1, -1);
-              return <InlineMath key={index} math={mathExp} />;
-          }
-          return <span key={index}>{part}</span>;
-      });
+    if (!text.includes('$')) {
+      return text;
+    }
+    
+    const parts = text.split(/(\$[^$]+\$)/g);
+    return parts.map((part, index) => {
+      if (part.startsWith('$') && part.endsWith('$')) {
+        const mathExp = part.slice(1, -1).trim();
+        const html = katex.renderToString(mathExp, {
+          output: 'mathml',
+          throwOnError: false,
+          strict: false,
+          trust: true
+        });
+        return <span key={index} dangerouslySetInnerHTML={{ __html: html }} />;
+      }
+      return part ? <span key={index}>{part}</span> : null;
+    });
   };
 
   if (!userProfile) {

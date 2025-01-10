@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 const TopicTransition = ({ 
   currentTopic, 
@@ -8,6 +8,14 @@ const TopicTransition = ({
   onViewProfile,
   startNewQuestions
 }) => {
+  // Calculate initial recommendations only once when component mounts
+  const [recommendedTopics] = useState(() => {
+    const availableTopics = topics.map(t => t.id).filter(id => id !== currentTopic);
+    const next1 = userProfile.selectNextTopic(availableTopics);
+    const next2 = userProfile.selectNextTopic(availableTopics.filter(id => id !== next1));
+    return [next1, next2];
+  });
+
   // Calculate success rates for each topic
   const topicStats = topics.map(topic => {
     const stats = userProfile.getTopicStats(topic.id);
@@ -19,16 +27,6 @@ const TopicTransition = ({
       correct: stats.correctAnswers
     };
   });
-
-  // Get next 2 recommended topics using Thompson sampling
-  const getNextRecommendedTopics = () => {
-    const availableTopics = topics.map(t => t.id).filter(id => id !== currentTopic);
-    const next1 = userProfile.selectNextTopic(availableTopics);
-    const next2 = userProfile.selectNextTopic(availableTopics.filter(id => id !== next1));
-    return [next1, next2];
-  };
-
-  const recommendedTopics = getNextRecommendedTopics();
 
   const handleTopicSelect = (topicId) => {
     if (topicId === currentTopic) {
