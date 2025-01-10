@@ -72,26 +72,26 @@ export class TopicStats {
 }
 
 const TEST_ACCOUNT_DATA = {
-  'moral_scenarios': { correct: 4, incorrect: 16 },
+  'moral_scenarios': { correct: 4, incorrect: 26 },
   'high_school_mathematics': { correct: 8, incorrect: 12 },
   'high_school_world_history': { correct: 12, incorrect: 8 },
   'marketing': { correct: 15, incorrect: 5 },
-  'computer_security': { correct: 16, incorrect: 4 },
+  'computer_security': { correct: 36, incorrect: 4 },
   'high_school_geography': { correct: 14, incorrect: 6 },
   'college_computer_science': { correct: 10, incorrect: 1 },
   'professional_psychology': { correct: 18, incorrect: 2 },
   'virology': { correct: 13, incorrect: 7 },
   'prehistory': { correct: 11, incorrect: 9 },
   'high_school_psychology': { correct: 17, incorrect: 3 },
-  'high_school_chemistry': { correct: 9, incorrect: 11 },
-  'logical_fallacies': { correct: 7, incorrect: 13 },
-  'business_ethics': { correct: 15, incorrect: 5 },
-  'world_religions': { correct: 14, incorrect: 6 },
-  'astronomy': { correct: 12, incorrect: 8 },
+  'high_school_chemistry': { correct: 9, incorrect: 10 },
+  'logical_fallacies': { correct: 17, incorrect: 13 },
+  'business_ethics': { correct: 15, incorrect: 15 },
+  'world_religions': { correct: 14, incorrect: 16 },
+  'astronomy': { correct: 12, incorrect: 2 },
   'college_biology': { correct: 16, incorrect: 4 },
   'philosophy': { correct: 13, incorrect: 7 },
   'machine_learning': { correct: 70, incorrect: 10 },
-  'nutrition': { correct: 11, incorrect: 2 } 
+  'nutrition': { correct: 31, incorrect: 2 } 
 };
 
 export class UserProfile {
